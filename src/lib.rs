@@ -1,4 +1,5 @@
 #![no_std]
+#![feature(abi_x86_interrupt)]
 #![cfg_attr(test, no_main)]
 #![feature(custom_test_frameworks)]
 #![test_runner(crate::testing::test_runner)]
@@ -7,6 +8,7 @@
 #[cfg(test)]
 use core::panic::PanicInfo;
 
+pub mod arch;
 pub mod hal;
 pub mod kernel;
 pub mod testing;
