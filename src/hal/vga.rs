@@ -1,21 +1,12 @@
 use core::fmt;
 
-use lazy_static::lazy_static;
+use crate::kernel::console::ConsolePrinter;
+use core::fmt::Arguments;
 use spin::Mutex;
 use volatile::Volatile;
 
 const TEXT_BUFFER_LINES: usize = 25;
 const TEXT_BUFFER_COLS: usize = 80;
-
-lazy_static! {
-    // A global `Writer` instance that can be used for printing to the VGA text buffer.
-    // Used by the `print!` and `println!` macros.
-    pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer {
-        column_position: 0,
-        color_code: ColorScheme::new(Color::LightGreen, Color::Black),
-        buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
-    });
-}
 
 // The standard color palette in VGA text mode.
 #[allow(dead_code)]
@@ -150,36 +141,56 @@ impl fmt::Write for Writer {
     }
 }
 
-/// Prints the given formatted string to the VGA text buffer through the global `WRITER` instance.
-#[doc(hidden)]
-pub fn vga_print(args: fmt::Arguments) {
-    use core::fmt::Write;
-    WRITER.lock().write_fmt(args).unwrap();
+pub struct VGA {
+    writer: Mutex<Writer>,
 }
 
+impl VGA {
+    pub fn new() -> Self {
+        return Self {
+            writer: Mutex::new(Writer {
+                column_position: 0,
+                color_code: ColorScheme::new(Color::LightGreen, Color::Black),
+                buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
+            }),
+        };
+    }
+}
+
+impl ConsolePrinter for VGA {
+    fn print(&self, args: Arguments) {
+        use core::fmt::Write;
+        self.writer.lock().write_fmt(args).unwrap();
+    }
+}
+
+// Unit tests for the VGA/Writer
 #[cfg(test)]
 mod tests {
-    use crate::console::vga::WRITER;
-    use crate::console::vga::{vga_print, TEXT_BUFFER_LINES};
+    use crate::hal::vga::{TEXT_BUFFER_LINES, VGA};
+    use crate::kernel::console::ConsolePrinter;
 
     #[test_case]
     fn test_println_simple() {
-        vga_print(format_args!("test_println_simple output"));
+        let vga = VGA::new();
+        vga.print(format_args!("test_println_simple output"));
     }
 
     #[test_case]
     fn test_println_many() {
+        let vga = VGA::new();
         for _ in 0..200 {
-            vga_print(format_args!("test_println_many output"));
+            vga.print(format_args!("test_println_many output"));
         }
     }
 
     #[test_case]
     fn test_println_output() {
+        let vga = VGA::new();
         let s = "Some test string that fits on a single line";
-        vga_print(format_args!("{}\n", s));
+        vga.print(format_args!("{}\n", s));
         for (i, c) in s.chars().enumerate() {
-            let screen_char = WRITER.lock().buffer.chars[TEXT_BUFFER_LINES - 2][i].read();
+            let screen_char = vga.writer.lock().buffer.chars[TEXT_BUFFER_LINES - 2][i].read();
             assert_eq!(char::from(screen_char.ascii_character), c);
         }
     }

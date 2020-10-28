@@ -22,7 +22,7 @@ mod kernel {
 
     #[panic_handler]
     fn panic(_info: &PanicInfo) -> ! {
-        kprintln!("{}", _info);
+        kprintln!("Hendrix is dead: {}", _info);
         loop {}
     }
 }

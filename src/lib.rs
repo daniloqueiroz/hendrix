@@ -7,7 +7,8 @@
 #[cfg(test)]
 use core::panic::PanicInfo;
 
-pub mod console;
+pub mod hal;
+pub mod kernel;
 pub mod testing;
 
 #[cfg(test)]
