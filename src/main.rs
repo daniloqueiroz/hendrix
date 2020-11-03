@@ -8,7 +8,8 @@
 mod kernel {
     use bootloader::{entry_point, BootInfo};
     use core::panic::PanicInfo;
-    use hendrix::arch::x86_64::interrupts;
+    use hendrix::arch::x86_64::cpu::CPU;
+
     use hendrix::kprintln;
 
     const VERSION: &'static str = env!("CARGO_PKG_VERSION");
@@ -16,12 +17,12 @@ mod kernel {
     entry_point!(kernel_main);
 
     fn kernel_main(_boot_info: &'static BootInfo) -> ! {
+        // TODO shall this be moved somewhere? maybe to the kernel module
         kprintln!("Hendrix Kernel {} - Foxy Lady", VERSION);
+        let processor = &CPU {};
+        processor.init();
 
-        // TODO refactor: The kernel should not initialize interrupts
-        // directly. Instead it should use some abstraction/trait to
-        // hide/encapsulate architecture specific operations such this
-        interrupts::init_idt();
+        // TODO remove it
         x86_64::instructions::interrupts::int3();
 
         loop {}
