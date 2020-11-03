@@ -1,11 +1,13 @@
+//! This module contains the testing framework support
+//! to be able to write and run tests for Hendrix.
 use crate::{kprint, kprintln};
-
-use core::panic::PanicInfo;
 
 pub trait Testable {
     fn run(&self) -> ();
 }
 
+/// Decorator pattern to print the name of the
+/// test function and its status
 impl<T> Testable for T
 where
     T: Fn(),
@@ -17,18 +19,15 @@ where
     }
 }
 
+/// The test runner iterates over all received tests and
+/// executes them.
 pub fn test_runner(tests: &[&dyn Testable]) {
+    kprintln!("Hendrix Test Runner");
+    kprintln!("-------------------");
     kprintln!(">> Running {} tests", tests.len());
     for test in tests {
         test.run();
     }
-}
-
-pub fn test_panic_handler(info: &PanicInfo) -> ! {
-    kprintln!("[failed]\n");
-    kprintln!("Error: {}\n", info);
-    exit_qemu(QemuExitCode::Failed);
-    loop {}
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

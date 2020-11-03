@@ -5,28 +5,33 @@
 #![test_runner(crate::testing::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
-#[cfg(test)]
-use core::panic::PanicInfo;
-
 pub mod arch;
 pub mod hal;
 pub mod kernel;
 pub mod testing;
 
-#[cfg(test)]
-bootloader::entry_point!(test_kernel_main);
+// Testing entrypoint and panic implementation
 
 #[cfg(test)]
-fn test_kernel_main(_boot_info: &'static bootloader::BootInfo) -> ! {
-    kprintln!("Hendrix Test Runner");
-    kprintln!("-------------------");
+#[export_name = "_start"]
+/// Main function when running the tests
+/// This will call the test_main which in its turn will
+/// call the `testing::test_runner` with all the tests.
+pub extern "C" fn __impl_start() {
     test_main();
     testing::exit_qemu(testing::QemuExitCode::Success);
-    loop {}
 }
 
 #[cfg(test)]
+use core::panic::PanicInfo;
+
+#[cfg(test)]
 #[panic_handler]
+/// Panic handler for the tests. Just print the error and exits qemu
+/// with an error exit code.
 fn panic(info: &PanicInfo) -> ! {
-    testing::test_panic_handler(info)
+    kprintln!("[failed]\n");
+    kprintln!("Error: {}\n", info);
+    testing::exit_qemu(testing::QemuExitCode::Failed);
+    loop {}
 }

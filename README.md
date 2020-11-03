@@ -4,8 +4,6 @@ Hendrix is a wannabe experimental Microkernel for x86_64 written in Rust.
 
 The Kernel itself takes care of scheduling, memory management, I/O and IPC. 
 
-
-
 # Development
 
 ## Before start
@@ -28,5 +26,5 @@ cargo install bootimage
 
 To run **Hendrix** you need to have [QEMU](https://www.qemu.org/) installed.
 
-Do a `cargo run` to launch the kernel or `cargo test` to run all the tests.
+Do a `cargo run` to launch the kernel or `cargo test --lib` to run all the tests.
 

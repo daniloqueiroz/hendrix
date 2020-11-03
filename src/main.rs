@@ -4,51 +4,36 @@
 #![test_runner(hendrix::testing::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
-#[cfg(not(test))]
-mod kernel {
-    use bootloader::{entry_point, BootInfo};
-    use core::panic::PanicInfo;
-    use hendrix::arch::x86_64::cpu::CPU;
+use core::panic::PanicInfo;
 
-    use hendrix::kprintln;
+use bootloader::{entry_point, BootInfo};
 
-    const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+use hendrix::arch::x86_64::cpu::CPU;
+use hendrix::kprintln;
 
-    entry_point!(kernel_main);
+const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
-    fn kernel_main(_boot_info: &'static BootInfo) -> ! {
-        // TODO shall this be moved somewhere? maybe to the kernel module
-        kprintln!("Hendrix Kernel {} - Foxy Lady", VERSION);
-        let processor = &CPU {};
-        processor.init();
+entry_point!(kernel_main);
 
-        // TODO remove it
-        x86_64::instructions::interrupts::int3();
+fn kernel_main(_boot_info: &'static BootInfo) -> ! {
+    // when running in test cfg we can just exit, as the tests are going
+    // to be launched from the `lib` module
+    #[cfg(test)]
+    hendrix::testing::exit_qemu(hendrix::testing::QemuExitCode::Success);
 
-        loop {}
-    }
+    // TODO shall this be moved somewhere? maybe to the kernel module
+    kprintln!("Hendrix Kernel {} - Foxy Lady", VERSION);
+    let processor = &CPU {};
+    processor.init();
 
-    #[panic_handler]
-    fn panic(_info: &PanicInfo) -> ! {
-        kprintln!("Hendrix is dead: {}", _info);
-        loop {}
-    }
+    // TODO remove it
+    x86_64::instructions::interrupts::int3();
+
+    loop {}
 }
 
-#[cfg(test)]
-mod test {
-    use bootloader::{entry_point, BootInfo};
-    use core::panic::PanicInfo;
-
-    entry_point!(test_kernel_main);
-
-    fn test_kernel_main(_boot_info: &'static BootInfo) -> ! {
-        hendrix::testing::exit_qemu(hendrix::testing::QemuExitCode::Success);
-        loop {}
-    }
-
-    #[panic_handler]
-    fn panic(info: &PanicInfo) -> ! {
-        hendrix::testing::test_panic_handler(info)
-    }
+#[panic_handler]
+fn panic(_info: &PanicInfo) -> ! {
+    kprintln!("Hendrix is dead: {}", _info);
+    loop {}
 }
