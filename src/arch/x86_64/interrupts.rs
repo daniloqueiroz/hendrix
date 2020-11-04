@@ -18,17 +18,22 @@ use lazy_static::lazy_static;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
 
 use crate::arch::x86_64::cpu::{InterruptionDetails, InterruptionType, CPU};
+use crate::kprintln;
+
+use super::gdt::DOUBLE_FAULT_IST_INDEX;
 
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
         let mut idt = InterruptDescriptorTable::new();
-        idt.double_fault.set_handler_fn(double_fault_handler);
+        unsafe {
+            // when
+            idt.double_fault.set_handler_fn(double_fault_handler).set_stack_index(DOUBLE_FAULT_IST_INDEX);
+        }
         idt.breakpoint.set_handler_fn(breakpoint_handler);
         // TODO add handlers for the other interruptions
         idt
     };
 }
-
 static mut CPU_INSTANCE: Option<&CPU> = None;
 
 /// Load the IDT table to the processor and stores the CPU instance
@@ -36,6 +41,7 @@ static mut CPU_INSTANCE: Option<&CPU> = None;
 /// This method should be called by the CPU object itself when
 /// initializing.
 pub fn init_idt(processor: &'static CPU) {
+    kprintln!("Initializing IDT");
     unsafe {
         CPU_INSTANCE = Some(processor);
     }

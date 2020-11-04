@@ -1,3 +1,4 @@
+use super::gdt::init_gdt;
 use super::interrupts::init_idt;
 use crate::kprintln;
 use x86_64::structures::idt::InterruptStackFrame;
@@ -16,6 +17,7 @@ pub struct CPU {}
 
 impl CPU {
     pub fn init(&'static self) {
+        init_gdt();
         init_idt(self);
     }
 
