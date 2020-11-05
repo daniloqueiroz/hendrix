@@ -29,7 +29,10 @@ fn kernel_main(_boot_info: &'static BootInfo) -> ! {
     // TODO remove it
     x86_64::instructions::interrupts::int3();
 
-    loop {}
+    loop {
+        use hendrix::kprint;
+        kprint!("-");
+    }
 }
 
 #[panic_handler]

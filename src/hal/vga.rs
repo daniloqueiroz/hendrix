@@ -1,9 +1,10 @@
 use core::fmt;
 
 use crate::kernel::console::ConsolePrinter;
-use core::fmt::Arguments;
+use core::fmt::{Arguments, Write};
 use spin::Mutex;
 use volatile::Volatile;
+use x86_64::instructions::interrupts;
 
 const TEXT_BUFFER_LINES: usize = 25;
 const TEXT_BUFFER_COLS: usize = 80;
@@ -159,8 +160,9 @@ impl VGA {
 
 impl ConsolePrinter for VGA {
     fn print(&self, args: Arguments) {
-        use core::fmt::Write;
-        self.writer.lock().write_fmt(args).unwrap();
+        interrupts::without_interrupts(|| {
+            self.writer.lock().write_fmt(args).unwrap();
+        });
     }
 }
 
@@ -169,6 +171,8 @@ impl ConsolePrinter for VGA {
 mod tests {
     use crate::hal::vga::{TEXT_BUFFER_LINES, VGA};
     use crate::kernel::console::ConsolePrinter;
+    use core::fmt::Write;
+    use x86_64::instructions::interrupts;
 
     #[test_case]
     fn test_println_simple() {
@@ -188,10 +192,14 @@ mod tests {
     fn test_println_output() {
         let vga = VGA::new();
         let s = "Some test string that fits on a single line";
-        vga.print(format_args!("{}\n", s));
-        for (i, c) in s.chars().enumerate() {
-            let screen_char = vga.writer.lock().buffer.chars[TEXT_BUFFER_LINES - 2][i].read();
-            assert_eq!(char::from(screen_char.ascii_character), c);
-        }
+
+        interrupts::without_interrupts(|| {
+            let mut writer = vga.writer.lock();
+            writeln!(writer, "\n{}", s).expect("writeln failed");
+            for (i, c) in s.chars().enumerate() {
+                let screen_char = writer.buffer.chars[TEXT_BUFFER_LINES - 2][i].read();
+                assert_eq!(char::from(screen_char.ascii_character), c);
+            }
+        });
     }
 }
