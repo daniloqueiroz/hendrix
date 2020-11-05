@@ -20,6 +20,7 @@ pub mod testing;
 pub extern "C" fn __impl_start() {
     test_main();
     testing::exit_qemu(testing::QemuExitCode::Success);
+    hlt_loop();
 }
 
 #[cfg(test)]
@@ -33,5 +34,13 @@ fn panic(info: &PanicInfo) -> ! {
     kprintln!("[failed]\n");
     kprintln!("Error: {}\n", info);
     testing::exit_qemu(testing::QemuExitCode::Failed);
-    loop {}
+    hlt_loop();
+}
+
+/// Run an indefinite lopp which waits until next interrupt arrives allowing
+/// the CPU to sleep and consume less energy.
+pub fn hlt_loop() -> ! {
+    loop {
+        x86_64::instructions::hlt();
+    }
 }
