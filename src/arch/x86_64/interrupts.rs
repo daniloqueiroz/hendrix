@@ -14,18 +14,15 @@
 //! The main goal of this approach is to keep all the unsafe/low level/idt specific
 //! code isolated in this module and having a more high level abstraction,
 //! the CPU object, dealing with it.
-use lazy_static::lazy_static;
-use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
-
-use crate::arch::x86_64::cpu::{InterruptionDetails, InterruptionType, CPU};
-use crate::kprintln;
-
 use super::gdt::DOUBLE_FAULT_IST_INDEX;
-
+use crate::arch::x86_64::cpu::{InterruptionDetails, InterruptionType, CPU};
+use crate::{kprint, kprintln};
+use lazy_static::lazy_static;
+use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
 use pic8259_simple::ChainedPics;
-use spin;
-
-use crate::kprint;
+use spin::Mutex;
+use x86_64::instructions::port::Port;
+use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
 
 /// Starting offset for a primary PIC 8259.
 pub const PIC_1_OFFSET: u8 = 32;
@@ -46,14 +43,18 @@ pub const PIC_2_OFFSET: u8 = PIC_1_OFFSET + 8;
 /// Secondary ATA ----> |____________|   Parallel Port 1----> |____________|
 ///
 /// Uses the first free interrupt range from 32 - 47.
-pub static PICS: spin::Mutex<ChainedPics> =
-    spin::Mutex::new(unsafe { ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) });
+pub static PICS: Mutex<ChainedPics> =
+    Mutex::new(unsafe { ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) });
 
-/// Enum used for the timer interrupt offsets.
+/// Enum used for the interrupt offsets.
 #[derive(Debug, Clone, Copy)]
 #[repr(u8)]
 pub enum InterruptIndex {
+    /// Timer interrupt uses Line 0 on primary PIC which is offset by PIC_1_OFFSET.
     Timer = PIC_1_OFFSET,
+
+    /// Keyboard interrupt uses Line 1 on primary PIC.
+    Keyboard,
 }
 
 impl InterruptIndex {
@@ -79,6 +80,9 @@ lazy_static! {
 
         idt[InterruptIndex::Timer.as_usize()]
             .set_handler_fn(timer_interrupt_handler);
+
+        idt[InterruptIndex::Keyboard.as_usize()]
+            .set_handler_fn(keyboard_interrupt_handler);
 
         // TODO add handlers for the other interruptions
 
@@ -143,5 +147,32 @@ extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: &mut InterruptSt
     unsafe {
         PICS.lock()
             .notify_end_of_interrupt(InterruptIndex::Timer.as_u8());
+    }
+}
+
+extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: &mut InterruptStackFrame) {
+    lazy_static! {
+        static ref KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> = Mutex::new(
+            Keyboard::new(layouts::Us104Key, ScancodeSet1, HandleControl::Ignore)
+        );
+    }
+
+    let mut keyboard = KEYBOARD.lock();
+    let mut port = Port::new(0x60);
+
+    let scancode: u8 = unsafe { port.read() };
+
+    if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
+        if let Some(key) = keyboard.process_keyevent(key_event) {
+            match key {
+                DecodedKey::Unicode(character) => kprint!("{}", character),
+                DecodedKey::RawKey(key) => kprint!("{:?}", key),
+            }
+        }
+    }
+
+    unsafe {
+        PICS.lock()
+            .notify_end_of_interrupt(InterruptIndex::Keyboard.as_u8());
     }
 }

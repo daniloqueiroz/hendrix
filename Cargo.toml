@@ -13,6 +13,7 @@ lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
 x86_64 = "0.12.2"
 uart_16550 = "0.2.10"
 pic8259_simple = "0.2.0"
+pc-keyboard = "0.5.1"
 
 [package.metadata.bootimage]
 build-command = ["build"]
