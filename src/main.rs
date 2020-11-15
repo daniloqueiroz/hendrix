@@ -9,7 +9,7 @@ use core::panic::PanicInfo;
 use bootloader::{entry_point, BootInfo};
 
 use hendrix::arch::x86_64::cpu::CPU;
-use hendrix::kprintln;
+use hendrix::{hlt_loop, kprintln};
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
@@ -29,7 +29,7 @@ fn kernel_main(_boot_info: &'static BootInfo) -> ! {
     // TODO remove it
     x86_64::instructions::interrupts::int3();
 
-    loop {}
+    hlt_loop();
 }
 
 #[panic_handler]

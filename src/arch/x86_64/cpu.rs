@@ -1,5 +1,5 @@
 use super::gdt::init_gdt;
-use super::interrupts::init_idt;
+use super::interrupts::{init_idt, PICS};
 use crate::kprintln;
 use x86_64::structures::idt::InterruptStackFrame;
 
@@ -19,13 +19,15 @@ impl CPU {
     pub fn init(&'static self) {
         init_gdt();
         init_idt(self);
+        unsafe { PICS.lock().initialize() };
+        x86_64::instructions::interrupts::enable();
     }
 
     pub(crate) fn on_interruption(
         &self,
         itype: InterruptionType,
-        stack: &mut InterruptStackFrame,
-        details: Option<InterruptionDetails>,
+        _stack: &mut InterruptStackFrame,
+        _details: Option<InterruptionDetails>,
     ) {
         kprintln!("Interruption received: {:?}", itype);
     }

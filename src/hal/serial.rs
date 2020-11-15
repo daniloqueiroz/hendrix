@@ -4,6 +4,7 @@ use spin::Mutex;
 use uart_16550::SerialPort;
 
 use crate::kernel::console::ConsolePrinter;
+use x86_64::instructions::interrupts;
 
 pub struct SerialIO {
     serial_writer: Mutex<SerialPort>,
@@ -21,9 +22,11 @@ impl SerialIO {
 
 impl ConsolePrinter for SerialIO {
     fn print(&self, args: Arguments) {
-        self.serial_writer
-            .lock()
-            .write_fmt(args)
-            .expect("Printing to serial failed");
+        interrupts::without_interrupts(|| {
+            self.serial_writer
+                .lock()
+                .write_fmt(args)
+                .expect("Printing to serial failed");
+        });
     }
 }

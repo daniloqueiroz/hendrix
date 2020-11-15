@@ -14,23 +14,78 @@
 //! The main goal of this approach is to keep all the unsafe/low level/idt specific
 //! code isolated in this module and having a more high level abstraction,
 //! the CPU object, dealing with it.
+use super::gdt::DOUBLE_FAULT_IST_INDEX;
+use crate::arch::x86_64::cpu::{InterruptionDetails, InterruptionType, CPU};
+use crate::{kprint, kprintln};
 use lazy_static::lazy_static;
+use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
+use pic8259_simple::ChainedPics;
+use spin::Mutex;
+use x86_64::instructions::port::Port;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
 
-use crate::arch::x86_64::cpu::{InterruptionDetails, InterruptionType, CPU};
-use crate::kprintln;
+/// Starting offset for a primary PIC 8259.
+pub const PIC_1_OFFSET: u8 = 32;
 
-use super::gdt::DOUBLE_FAULT_IST_INDEX;
+/// Starting offset for the secondary PIC 8259.
+pub const PIC_2_OFFSET: u8 = PIC_1_OFFSET + 8;
+
+/// ChainedPics layout with a primary and secondary pic.
+///
+///                      ____________                          ____________
+/// Real Time Clock --> |            |   Timer -------------> |            |
+/// ACPI -------------> |            |   Keyboard-----------> |            |      _____
+/// Available --------> | Secondary  |----------------------> | Primary    |     |     |
+/// Available --------> | Interrupt  |   Serial Port 2 -----> | Interrupt  |---> | CPU |
+/// Mouse ------------> | Controller |   Serial Port 1 -----> | Controller |     |_____|
+/// Co-Processor -----> |            |   Parallel Port 2/3 -> |            |
+/// Primary ATA ------> |            |   Floppy disk -------> |            |
+/// Secondary ATA ----> |____________|   Parallel Port 1----> |____________|
+///
+/// Uses the first free interrupt range from 32 - 47.
+pub static PICS: Mutex<ChainedPics> =
+    Mutex::new(unsafe { ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) });
+
+/// Enum used for the interrupt offsets.
+#[derive(Debug, Clone, Copy)]
+#[repr(u8)]
+pub enum InterruptIndex {
+    /// Timer interrupt uses Line 0 on primary PIC which is offset by PIC_1_OFFSET.
+    Timer = PIC_1_OFFSET,
+
+    /// Keyboard interrupt uses Line 1 on primary PIC.
+    Keyboard,
+}
+
+impl InterruptIndex {
+    fn as_u8(self) -> u8 {
+        self as u8
+    }
+
+    fn as_usize(self) -> usize {
+        usize::from(self.as_u8())
+    }
+}
 
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
         let mut idt = InterruptDescriptorTable::new();
         unsafe {
             // when
-            idt.double_fault.set_handler_fn(double_fault_handler).set_stack_index(DOUBLE_FAULT_IST_INDEX);
+            idt.double_fault
+                .set_handler_fn(double_fault_handler)
+                .set_stack_index(DOUBLE_FAULT_IST_INDEX);
         }
         idt.breakpoint.set_handler_fn(breakpoint_handler);
+
+        idt[InterruptIndex::Timer.as_usize()]
+            .set_handler_fn(timer_interrupt_handler);
+
+        idt[InterruptIndex::Keyboard.as_usize()]
+            .set_handler_fn(keyboard_interrupt_handler);
+
         // TODO add handlers for the other interruptions
+
         idt
     };
 }
@@ -81,5 +136,43 @@ extern "x86-interrupt" fn breakpoint_handler(stack_frame: &mut InterruptStackFra
         } else {
             panic!("No InterruptionHandler configured")
         }
+    }
+}
+
+extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: &mut InterruptStackFrame) {
+    kprint!(".");
+
+    // Send EOI: end-of-interrupt to the controller indicating the interrupt
+    // was processed.
+    unsafe {
+        PICS.lock()
+            .notify_end_of_interrupt(InterruptIndex::Timer.as_u8());
+    }
+}
+
+extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: &mut InterruptStackFrame) {
+    lazy_static! {
+        static ref KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> = Mutex::new(
+            Keyboard::new(layouts::Us104Key, ScancodeSet1, HandleControl::Ignore)
+        );
+    }
+
+    let mut keyboard = KEYBOARD.lock();
+    let mut port = Port::new(0x60);
+
+    let scancode: u8 = unsafe { port.read() };
+
+    if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
+        if let Some(key) = keyboard.process_keyevent(key_event) {
+            match key {
+                DecodedKey::Unicode(character) => kprint!("{}", character),
+                DecodedKey::RawKey(key) => kprint!("{:?}", key),
+            }
+        }
+    }
+
+    unsafe {
+        PICS.lock()
+            .notify_end_of_interrupt(InterruptIndex::Keyboard.as_u8());
     }
 }
