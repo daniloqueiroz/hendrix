@@ -12,3 +12,6 @@ Cargo.lock
 # Intellij IDE Files
 *.iml
 .idea
+
+# html docs
+_html
