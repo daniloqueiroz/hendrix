@@ -5,7 +5,6 @@
 #![test_runner(crate::testing::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
-pub mod arch;
 pub mod hal;
 pub mod kernel;
 pub mod testing;

@@ -1,5 +1,8 @@
+//! Hardware Abstraction Layer (hal)
+//! This module contains all the low level and architecture specific code.
 use lazy_static::lazy_static;
 
+pub mod arch;
 mod serial;
 mod vga;
 

@@ -1,7 +1,9 @@
-use super::gdt::init_gdt;
-use super::interrupts::{init_idt, PICS};
-use crate::kprintln;
 use x86_64::structures::idt::InterruptStackFrame;
+
+use crate::kprintln;
+
+use super::gdt::init_gdt;
+use super::interrupts::{init_idt, init_pic};
 
 #[derive(Debug)]
 pub enum InterruptionType {
@@ -19,7 +21,7 @@ impl CPU {
     pub fn init(&'static self) {
         init_gdt();
         init_idt(self);
-        unsafe { PICS.lock().initialize() };
+        init_pic();
         x86_64::instructions::interrupts::enable();
     }
 

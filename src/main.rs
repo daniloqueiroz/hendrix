@@ -8,7 +8,7 @@ use core::panic::PanicInfo;
 
 use bootloader::{entry_point, BootInfo};
 
-use hendrix::arch::x86_64::cpu::CPU;
+use hendrix::hal::arch::x86_64::cpu::CPU;
 use hendrix::{hlt_loop, kprintln};
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");

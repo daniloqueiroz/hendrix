@@ -15,7 +15,7 @@
 //! code isolated in this module and having a more high level abstraction,
 //! the CPU object, dealing with it.
 use super::gdt::DOUBLE_FAULT_IST_INDEX;
-use crate::arch::x86_64::cpu::{InterruptionDetails, InterruptionType, CPU};
+use crate::hal::arch::x86_64::cpu::{InterruptionDetails, InterruptionType, CPU};
 use crate::{kprint, kprintln};
 use lazy_static::lazy_static;
 use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
@@ -43,7 +43,7 @@ pub const PIC_2_OFFSET: u8 = PIC_1_OFFSET + 8;
 /// Secondary ATA ----> |____________|   Parallel Port 1----> |____________|
 ///
 /// Uses the first free interrupt range from 32 - 47.
-pub static PICS: Mutex<ChainedPics> =
+static PICS: Mutex<ChainedPics> =
     Mutex::new(unsafe { ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) });
 
 /// Enum used for the interrupt offsets.
@@ -67,11 +67,14 @@ impl InterruptIndex {
     }
 }
 
+pub fn init_pic() {
+    unsafe { PICS.lock().initialize() };
+}
+
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
         let mut idt = InterruptDescriptorTable::new();
         unsafe {
-            // when
             idt.double_fault
                 .set_handler_fn(double_fault_handler)
                 .set_stack_index(DOUBLE_FAULT_IST_INDEX);
