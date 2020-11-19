@@ -33,13 +33,5 @@ fn panic(info: &PanicInfo) -> ! {
     kprintln!("[failed]\n");
     kprintln!("Error: {}\n", info);
     testing::exit_qemu(testing::QemuExitCode::Failed);
-    hlt_loop();
-}
-
-/// Run an indefinite loop which waits until next interrupt arrives allowing
-/// the CPU to sleep and consume less energy.
-pub fn hlt_loop() -> ! {
-    loop {
-        x86_64::instructions::hlt();
-    }
+    loop {}
 }

@@ -9,9 +9,10 @@ use core::panic::PanicInfo;
 use bootloader::{entry_point, BootInfo};
 
 use hendrix::hal::arch::x86_64::cpu::CPU;
-use hendrix::{hlt_loop, kprintln};
+use hendrix::kprintln;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+const PROCESSOR: &'static CPU = &CPU {};
 
 entry_point!(kernel_main);
 
@@ -23,17 +24,14 @@ fn kernel_main(_boot_info: &'static BootInfo) -> ! {
 
     // TODO shall this be moved somewhere? maybe to the kernel module
     kprintln!("Hendrix Kernel {} - Foxy Lady", VERSION);
-    let processor = &CPU {};
-    processor.init();
+    PROCESSOR.init();
 
-    // TODO remove it
-    x86_64::instructions::interrupts::int3();
-
-    hlt_loop();
+    // Put the CPU to sleep till we receive the next interruption
+    PROCESSOR.hlt_loop()
 }
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     kprintln!("Hendrix is dead: {}", _info);
-    loop {}
+    PROCESSOR.hlt_loop()
 }

@@ -34,4 +34,12 @@ impl CPU {
     ) {
         kprintln!("Interruption received: {:?}", itype);
     }
+
+    /// Run an indefinite loop which waits until next interrupt arrives allowing
+    /// the CPU to sleep and consume less energy.
+    pub fn hlt_loop(&self) -> ! {
+        loop {
+            x86_64::instructions::hlt();
+        }
+    }
 }

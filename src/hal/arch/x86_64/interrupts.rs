@@ -17,7 +17,7 @@
 use lazy_static::lazy_static;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode};
 
-use crate::{hlt_loop, kprintln};
+use crate::kprintln;
 
 use super::cpu::{InterruptionDetails, InterruptionType, CPU};
 use super::gdt::DOUBLE_FAULT_IST_INDEX;
@@ -104,5 +104,5 @@ extern "x86-interrupt" fn page_fault_handler(
     kprintln!("Accessed Address: {:?}", Cr2::read());
     kprintln!("Error Code: {:?}", error_code);
     kprintln!("{:#?}", stack_frame);
-    hlt_loop();
+    unsafe { CPU_INSTANCE.unwrap().hlt_loop() }
 }
