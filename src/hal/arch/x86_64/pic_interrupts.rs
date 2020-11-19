@@ -55,17 +55,19 @@ pub fn init_pic() {
     unsafe { PICS.lock().initialize() };
 }
 
+macro_rules! end_of_interruption {
+    ($arg:expr) => {
+        unsafe {
+            PICS.lock().notify_end_of_interrupt($arg);
+        }
+    };
+}
+
 pub(crate) extern "x86-interrupt" fn timer_interrupt_handler(
     _stack_frame: &mut InterruptStackFrame,
 ) {
     kprint!(".");
-
-    // Send EOI: end-of-interrupt to the controller indicating the interrupt
-    // was processed.
-    unsafe {
-        PICS.lock()
-            .notify_end_of_interrupt(InterruptIndex::Timer.as_u8());
-    }
+    end_of_interruption!(InterruptIndex::Timer.as_u8());
 }
 
 pub(crate) extern "x86-interrupt" fn keyboard_interrupt_handler(
@@ -91,8 +93,5 @@ pub(crate) extern "x86-interrupt" fn keyboard_interrupt_handler(
         }
     }
 
-    unsafe {
-        PICS.lock()
-            .notify_end_of_interrupt(InterruptIndex::Keyboard.as_u8());
-    }
+    end_of_interruption!(InterruptIndex::Keyboard.as_u8());
 }
