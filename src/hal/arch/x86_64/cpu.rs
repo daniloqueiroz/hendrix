@@ -3,7 +3,8 @@ use x86_64::structures::idt::InterruptStackFrame;
 use crate::kprintln;
 
 use super::gdt::init_gdt;
-use super::interrupts::{init_idt, init_pic};
+use super::interrupts::init_idt;
+use crate::hal::arch::x86_64::pic_interrupts::init_pic;
 
 #[derive(Debug)]
 pub enum InterruptionType {
@@ -20,8 +21,8 @@ pub struct CPU {}
 impl CPU {
     pub fn init(&'static self) {
         init_gdt();
-        init_idt(self);
         init_pic();
+        init_idt(self);
         x86_64::instructions::interrupts::enable();
     }
 

@@ -36,7 +36,7 @@ fn panic(info: &PanicInfo) -> ! {
     hlt_loop();
 }
 
-/// Run an indefinite lopp which waits until next interrupt arrives allowing
+/// Run an indefinite loop which waits until next interrupt arrives allowing
 /// the CPU to sleep and consume less energy.
 pub fn hlt_loop() -> ! {
     loop {
