@@ -6,7 +6,7 @@ use x86_64::structures::idt::InterruptStackFrame;
 
 use lazy_static::lazy_static;
 
-use crate::{kprint, kprintln};
+use crate::kprint;
 
 /// Starting offset for a primary PIC 8259.
 pub const PIC_1_OFFSET: u8 = 32;

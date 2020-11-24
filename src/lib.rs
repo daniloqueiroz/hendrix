@@ -2,15 +2,23 @@
 #![feature(abi_x86_interrupt)]
 #![cfg_attr(test, no_main)]
 #![feature(custom_test_frameworks)]
+#![feature(alloc_error_handler)]
 #![test_runner(crate::testing::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
+extern crate alloc;
+
+#[cfg(test)]
+use core::panic::PanicInfo;
+
+pub mod commons;
 pub mod hal;
 pub mod kernel;
+pub mod runtime;
 pub mod testing;
 
+// TODO can any of this be moved to the runtime module?
 // Testing entrypoint and panic implementation
-
 #[cfg(test)]
 #[export_name = "_start"]
 /// Main function when running the tests
@@ -21,9 +29,6 @@ pub extern "C" fn __impl_start() {
     testing::exit_qemu(testing::QemuExitCode::Success);
     hlt_loop();
 }
-
-#[cfg(test)]
-use core::panic::PanicInfo;
 
 #[cfg(test)]
 #[panic_handler]
