@@ -1,5 +1,8 @@
 pub mod console;
+pub mod cpu;
+pub mod cpu_events;
 pub mod heap;
+pub mod main;
 
 /// Virtual address of the beginning of the Kernel heap
 pub const HEAP_START_ADDRESS: usize = 0x_4444_4444_0000;

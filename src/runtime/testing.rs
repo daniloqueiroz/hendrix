@@ -13,7 +13,7 @@ where
     T: Fn(),
 {
     fn run(&self) {
-        kprint!("{}...\t", core::any::type_name::<T>());
+        kprint!("{}...", core::any::type_name::<T>());
         self();
         kprintln!("[ok]");
     }
