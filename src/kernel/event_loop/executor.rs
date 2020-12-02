@@ -6,8 +6,7 @@ use core::task::{Context, Poll, Waker};
 
 use crossbeam_queue::ArrayQueue;
 
-use crate::kprintln;
-use crate::runtime::task::{Task, TaskId};
+use super::task::{Task, TaskId};
 
 struct TaskWaker {
     task_id: TaskId,

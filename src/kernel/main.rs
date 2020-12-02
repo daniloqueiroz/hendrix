@@ -7,9 +7,16 @@ use x86_64::VirtAddr;
 use crate::hal::arch::x86_64::cpu::X86CPU;
 use crate::hal::arch::x86_64::memory::Memory;
 use crate::kernel::cpu::{CPUEvents, CPU};
+use crate::kernel::event_loop::executor::EventLoopExecutor;
 use crate::kernel::{HEAP_SIZE, HEAP_START_ADDRESS};
 use crate::kprint;
-use crate::runtime::executor::EventLoopExecutor;
+
+// TODO list
+// - [ ] Receive a struct as kernel_main parameter
+// - [ ] Change CPU keyboard_stream to cpu_events_stream
+// - [ ] Kernel OnceCell struct (with processor, mem... events are handled by the kernel)
+// - [ ] Add support for timer interruption
+// - [ ] Add support for exception interruptions
 
 pub fn kernel_main(memory_offset: u64, mem_map: &'static MemoryMap) -> ! {
     let mut mem = Memory::new(memory_offset, mem_map);

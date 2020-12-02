@@ -1,6 +1,7 @@
 pub mod console;
 pub mod cpu;
 pub mod cpu_events;
+mod event_loop;
 pub mod heap;
 pub mod main;
 
